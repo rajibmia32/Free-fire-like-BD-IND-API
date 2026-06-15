@@ -9,11 +9,11 @@ API_URL = "https://jwttoken-ten.vercel.app/token"
 # Regional Configurations
 REGIONS = {
     "BD": {
-        "uidpass_file": "bd_uidpass.json",
+        "uidpass_file": "uidpass_bd.json",
         "token_file": "token_bd.json"
     },
     "IND": {
-        "uidpass_file": "ind_uidpass.json",
+        "uidpass_file": "uidpass_ind.json",
         "token_file": "token_ind.json"
     }
 }
