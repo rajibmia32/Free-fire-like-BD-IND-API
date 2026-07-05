@@ -1,92 +1,41 @@
 import requests
 import json
-import time
-import os
 
-# API URL
+UIDPASS_FILE = "uidpass.json"
+TOKEN_FILE = "tokens.json"
 API_URL = "https://jwttoken-ten.vercel.app/token"
 
-# Regional Configurations
-REGIONS = {
-    "BD": {
-        "uidpass_file": "uidpass_bd.json",
-        "token_file": "token_bd.json"
-    },
-    "IND": {
-        "uidpass_file": "uidpass_ind.json",
-        "token_file": "token_ind.json"
-    }
-}
-
-def read_uidpass(file_path):
-    if not os.path.exists(file_path):
-        print(f"⚠️  ফাইল পাওয়া যায়নি: {file_path}")
-        return []
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            if not isinstance(data, list):
-                data = [data]
-            return data
-    except Exception as e:
-        print(f"❌ {file_path} পড়তে সমস্যা: {e}")
-        return []
+def read_uidpass():
+    with open(UIDPASS_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 def fetch_token(uid, password):
+    url = f"{API_URL}?uid={uid}&password={password}"
     try:
-        params = {"uid": uid, "password": password}
-        response = requests.get(API_URL, params=params, timeout=25)
-        
-        if response.status_code == 200:
-            data = response.json()
-            if data.get("status") == "success":
-                return data.get("token")
-        return None
-    except Exception:
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        return data.get("token")
+    except Exception as e:
+        print(f"Error fetching token for UID {uid}: {e}")
         return None
 
-def process_region(region_name, config):
-    print(f"\n🌍 Processing Region: {region_name}")
-    uidpass_list = read_uidpass(config["uidpass_file"])
-    
-    if not uidpass_list:
-        print(f"ℹ️  {region_name} এর জন্য কোনো অ্যাকাউন্ট পাওয়া যায়নি।")
-        return
-
-    print(f"✅ {len(uidpass_list)}টা অ্যাকাউন্ট পাওয়া গেছে।")
-    new_tokens = []
-    success = 0
-
-    for i, acc in enumerate(uidpass_list, 1):
-        uid = str(acc.get("uid", "")).strip()
-        password = str(acc.get("password", "")).strip()
-
-        if not uid or not password:
-            continue
-
-        print(f"   [{i}/{len(uidpass_list)}] Requesting token for UID: {uid}...", end="\r")
-        token = fetch_token(uid, password)
-
-        if token:
-            new_tokens.append({"token": token})
-            success += 1
-        
-        time.sleep(2.0) # Delay to avoid rate limits
-
-    if new_tokens:
-        with open(config["token_file"], "w", encoding="utf-8") as f:
-            json.dump(new_tokens, f, ensure_ascii=False, indent=4)
-        print(f"\n✅ {success}টা টোকেন {config['token_file']} এ সেভ হয়েছে।")
-    else:
-        print(f"\n❌ {region_name} এর জন্য কোনো টোকেন পাওয়া যায়নি।")
+def update_token_file(token_list):
+    with open(TOKEN_FILE, "w", encoding="utf-8") as f:
+        json.dump(token_list, f, ensure_ascii=False, indent=4)
 
 def main():
-    print("🚀 Regional JWT Token Updater Starting...")
-    
-    for region, config in REGIONS.items():
-        process_region(region, config)
-        
-    print("\n🎯 All regions processed successfully!")
+    uidpass_list = read_uidpass()
+    new_tokens = []
+    for item in uidpass_list:
+        token = fetch_token(item["uid"], item["password"])
+        if token:
+            new_tokens.append({"token": token})
+    if new_tokens:
+        update_token_file(new_tokens)
+        print("tokens.json updated successfully.")
+    else:
+        print("No tokens updated.")
 
 if __name__ == "__main__":
     main()
