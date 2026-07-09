@@ -1,0 +1,43 @@
+# .github/workflows/update_tokens.yml
+name: Update Tokens
+
+on:
+  schedule:
+    - cron: '0 */4 * * *'  # প্রতি ৪ ঘণ্টা পরপর
+  workflow_dispatch:  # ম্যানুয়ালি রান করার অপশন
+
+jobs:
+  update-tokens:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Run token update script
+        run: python update_tokens.py
+
+      - name: Commit and push if changed
+        run: |
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
+          git add tokens.json
+          
+          # যদি ফাইলে কোনো পরিবর্তন থাকে, তবেই কেবল কমিট, পুল এবং পুশ হবে
+          git diff --quiet && git diff --staged --quiet || (
+            git commit -m "Update tokens [automated]" && \
+            git pull --rebase origin main && \
+            git push origin main
+          )
